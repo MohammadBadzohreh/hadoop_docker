@@ -1,0 +1,35 @@
+services:
+  namenode:
+    image: bde2020/hadoop-namenode:2.0.0-hadoop3.2.1-java8
+    container_name: namenode
+    environment:
+      - CLUSTER_NAME=test
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - HDFS_NAMENODE_CMD=--bind-host 0.0.0.0
+    ports:
+      - "9870:9870"
+      - "9000:9000"
+    volumes:
+      - ./inputsocial.txt:/inputsocial.txt:ro
+
+  datanode:
+    image: bde2020/hadoop-datanode:2.0.0-hadoop3.2.1-java8
+    container_name: datanode
+    environment:
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - HDFS_CONF_dfs_replication=1
+    depends_on:
+      - namenode
+
+  spark:
+    build:
+      context: ./spark
+      dockerfile: Dockerfile
+    # Do NOT set container_name here
+    depends_on:
+      - namenode
+    environment:
+      - HADOOP_CONF_DIR=/etc/hadoop/conf
+    ports:
+      - "5050:4040"
+    tty: true
