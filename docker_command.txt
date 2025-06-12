@@ -1,0 +1,131 @@
+cd .\spark
+docker build -t pymyk-spark-hadoop:latest .
+cd ..
+
+
+
+
+docker compose up -d namenode datanode
+
+
+docker ps       (to see the run of the nodename and datanode)
+
+
+see location     http://localhost:9870
+
+
+
+docker exec -it namenode sh -c "hdfs dfs -mkdir -p /user/you/input && hdfs dfs -put -f /inputsocial.txt /user/you/input/"
+
+(for upload data in hdfs)
+
+
+docker exec -it namenode sh -c "hdfs dfs -ls /user/you/input"
+
+(for verify upload)
+
+
+
+(for run the spark job)
+
+$ts = Get-Date -Format "yyyyMMddHHmmss"
+$inPath = "hdfs://namenode:9000/user/you/input/inputsocial.txt"
+$outPath = "hdfs://namenode:9000/user/you/output/pymk_$ts"
+Write-Host "Running Spark job with input=$inPath output=$outPath"
+
+
+ docker network ls
+
+docker network inspect people-you-might-know_default
+
+
+
+
+
+_________________________________________________________________________________-
+
+
+
+
+
+# A. Prepare project
+cd C:\Users\m.badzohreh\Desktop
+mkdir people-you-might-know
+cd .\people-you-might-know
+# Copy your input file into this folder:
+Copy-Item C:\path\to\inputsocial.txt .\
+
+# Create docker-compose.yml (edit in an editor as above)
+
+# Create spark/ folder and files (Dockerfile, core-site.xml, people_you_might_know.py)
+
+# B. Build Spark image
+cd .\spark
+docker build -t pymyk-spark-hadoop:latest .
+cd ..
+
+# Test image
+docker run --rm pymyk-spark-hadoop:latest /bin/sh -c "echo Spark image OK; python --version"
+
+# C. Start Hadoop cluster
+docker compose down --remove-orphans
+docker network prune   # optional
+docker compose up -d namenode datanode
+docker ps
+docker exec -it namenode sh -c "hdfs dfs -mkdir -p /user/you/input && hdfs dfs -put -f /inputsocial.txt /user/you/input/"
+docker exec -it namenode sh -c "hdfs dfs -ls /user/you/input"
+
+# D. Identify network
+docker network ls
+# Note network name, e.g. people-you-might-know_default
+
+# E. Run Spark job
+$ts = Get-Date -Format "yyyyMMddHHmmss"
+$inPath = "hdfs://namenode:9000/user/you/input/inputsocial.txt"
+$outPath = "hdfs://namenode:9000/user/you/output/pymk_$ts"
+Write-Host "Running Spark job: input=$inPath output=$outPath"
+
+# Without UI:
+docker run --rm `
+  --network people-you-might-know_default `
+  -v "C:\Users\m.badzohreh\Desktop\people-you-might-know\spark\core-site.xml:/etc/hadoop/conf/core-site.xml:ro" `
+  -e HADOOP_CONF_DIR=/etc/hadoop/conf `
+  pymyk-spark-hadoop:latest `
+  /bin/sh -c "python /app/people_you_might_know.py $inPath $outPath"
+
+# With UI on port 5050:
+docker run --rm `
+  --network people-you-might-know_default `
+  -p 5050:4040 `
+  -v "C:\Users\m.badzohreh\Desktop\people-you-might-know\spark\core-site.xml:/etc/hadoop/conf/core-site.xml:ro" `
+  -e HADOOP_CONF_DIR=/etc/hadoop/conf `
+  pymyk-spark-hadoop:latest `
+  /bin/sh -c "python /app/people_you_might_know.py $inPath $outPath"
+
+# F. Inspect output
+docker exec -it namenode sh -c "hdfs dfs -ls /user/you/output/pymk_$ts"
+docker exec namenode sh -c "hdfs dfs -cat /user/you/output/pymk_$ts/part-*" | more
+
+# G. Cleanup
+docker compose down
+docker rmi pymyk-spark-hadoop:latest   # optional
+docker network prune                   # optional
+
+
+
+
+
+
+
+
+
+
+
+delete previos container and network 
+
+ docker compose down --remove-orphans
+
+ docker network prune
+
+ docker ps -a
+docker rm -f spark   # if a leftover named container exists
